@@ -1,0 +1,44 @@
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+
+# load data
+data = pd.read_csv('wine_data.csv')
+
+# drop irrelevant features
+data.drop(['description', 'winery', 'region_2'], axis=1, inplace=True)
+
+# fill missing values in price with the mean price
+data['price'].fillna(data['price'].mean(), inplace=True)
+
+# split data into features and target
+X = data.drop('variety', axis=1)
+y = data['variety']
+
+# preprocess categorical features using OneHotEncoder
+categorical_features = ['country', 'province', 'region_1', 'designation']
+categorical_transformer = Pipeline(steps=[('onehot', OneHotEncoder(handle_unknown='ignore'))])
+preprocessor = ColumnTransformer(transformers=[('cat', categorical_transformer, categorical_features)])
+
+# define the Random Forest Classifier model
+rf = RandomForestClassifier()
+
+# define the pipeline
+pipe = Pipeline(steps=[('preprocessor', preprocessor), ('rf', rf)])
+
+# define the grid of hyperparameters to search
+param_grid = {
+    'rf__n_estimators': [100, 200, 300],
+    'rf__max_depth': [10, 20, 30],
+}
+
+# use GridSearchCV to find the optimal hyperparameters
+grid_search = GridSearchCV(pipe, param_grid, cv=5)
+grid_search.fit(X, y)
+
+# print the best hyperparameters and accuracy score
+print("Best hyperparameters: ", grid_search.best_params_)
+print("Accuracy score: ", grid_search.best_score_)
